@@ -1,1 +1,2 @@
 rpc: http://localhost:8090/ws
+ws: ws://127.0.0.1:8090/ws

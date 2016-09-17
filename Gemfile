@@ -11,6 +11,8 @@ gem 'bootstrap-sass', '~> 3.3.5'
 
 gem 'progress_bar'
 
+gem 'faye-websocket'
+
 #gem 'diffy'
 #gem 'bcrypt', '~> 3.1.7'
 
