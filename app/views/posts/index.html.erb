@@ -1,3 +1,19 @@
 <pre>
   <%= YAML::dump(@rpc.get_dynamic_global_properties) %>
 </pre>
+
+<pre>
+  <%= YAML::dump(@rpc.get_content('steemit', 'firstpost')) %>
+</pre>
+
+<pre>
+  <%= YAML::dump(@rpc.get_block(1)) %>
+</pre>
+
+<pre>
+  <%= YAML::dump(@rpc.get_block_header(2)) %>
+</pre>
+
+<pre>
+  <%= YAML::dump(@rpc.get_accounts(['steemit'])) %>
+</pre>

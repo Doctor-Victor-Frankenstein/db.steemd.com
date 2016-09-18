@@ -13,6 +13,8 @@ gem 'progress_bar'
 
 gem 'faye-websocket'
 
+gem 'iconv'
+
 #gem 'diffy'
 #gem 'bcrypt', '~> 3.1.7'
 

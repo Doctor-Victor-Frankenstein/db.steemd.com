@@ -8,6 +8,10 @@ class Generic < ActiveRecord::Base
     conn.execute(sql)
   end
 
+  def self.query_all sql
+    conn.execute(sql).to_a
+  end
+
   def self.query_one sql
     rows = conn.execute(sql).to_a[0]
     rows[0] if rows
