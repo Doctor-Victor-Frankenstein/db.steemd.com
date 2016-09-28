@@ -1,0 +1,197 @@
+<h1>Witness Voting</h1>
+<hr />
+
+<%
+
+vests = @rpc.get_dynamic_global_properties['total_vesting_shares'].split(' ')[0].to_f
+
+mil = 1000000.0
+mmil   = 1000000.0 * 1000000.0
+thresh = 100 * mmil
+
+sql = "SELECT name, 
+              proxy_vests, 
+              votes_for,
+              (SELECT COUNT(*) FROM accounts WHERE proxy = a.name)
+         FROM accounts a
+        WHERE proxy_vests > #{thresh}
+          AND proxy = ''
+     ORDER BY proxy_vests DESC"
+rows = Generic.query_all(sql)
+
+#@groups     = Account.where('proxy_vests > ?', thresh).where(proxy: '').order(:proxy_vests => 'desc').group_by{|v| v.votes_for.blank?}
+@all_voters = rows.map{|r| OpenStruct.new(%w{name proxy_vests votes_for followers}.zip(r).to_h)}
+
+@all_voters.each do |voter|
+  voter.proxy_vests /= 1000000.0
+  voter.weight = 100 * voter.proxy_vests / vests
+  voter.votes = voter.votes_for.split(',')
+end
+
+steemit_exclude = false
+if @all_voters[0].name == 'steemit' && @all_voters[0].votes.size == 0
+  @all_voters.shift
+  steemit_exclude = true
+end
+
+max = @all_voters[0].weight
+active = @all_voters.group_by{|v| true || !v.votes_for.blank?}
+@voters     = active[true]
+@abstainers = active[false] || []
+
+@chart_voters = @voters.select{|v| v.votes.size > 0}[0,50]
+
+%>
+
+<div class="row">
+<div class="col-md-10">
+<table class="table table-condensed ultra-condensed">
+  <thead>
+    <tr>
+      <th class="text-center">#</th>
+      <th>Account</th>
+      <th class="text-right" colspan="1">Vests</th>
+      <th class="text-center" colspan="1">Weight</th>
+      <th class="text-center">Proxied</th>
+      <th class="text-center">Votes</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <% act_count = 0 %>
+    <% @voters[0,100].each_with_index do |voter, i| %>
+      <tr>
+        <td class="text-center">
+          <div style="position:relative;">
+            <% color = voter.votes.size == 0 ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,255,0.15)' %>
+            <div style="left:-4px;top:-2px;position:absolute;background:<%=color%>;width:<%= 100*[1, voter.weight/max].min * 8 %>px;height:1.8em;"></div>
+            <%= i+1 %>
+          </div>
+        </td>
+        <td><%= pretty_name(voter.name) %></td>
+        <td class="text-right"><%= pretty_num(voter.proxy_vests / mil, 0) %><m>MV</m></td>
+        <td class="text-center"><%= "%0.2f" % voter.weight.round(2) %>%</td>
+        <td class="text-center"><%= voter.followers %></td>
+        <td class="text-center"><%= voter.votes.size %></td>
+        <% act_count += 1 if voter.votes.size > 0 %>
+        <% break if act_count >= 50 %>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+<% if steemit_exclude %>
+  <p class="text-muted">@steemit (with 0 votes) exluded from this table.</p>
+<% end %>
+
+</div>
+<% if false %>
+<div class="col-md-4">
+<h2>abstaining</h2>
+<table class="table table-condensed">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>voter</th>
+      <th>weight</th>
+      <th>%</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <% @abstainers[0,50].each_with_index do |voter, i| %>
+      <tr>
+        <td>
+          <div style="position:relative;">
+            <div style="left:-2px;position:absolute;background:rgba(0,0,255,0.1);width:<%= 100*[1, voter.weight/max].min * 5 %>px;height:1.4em;"></div>
+            <%= i+1 %>
+          </div>
+        </td>
+        <td><%= pretty_name(voter.name) %></td>
+        <td><%= pretty_num(voter.proxy_vests / mil, 0) %><m>MV</m></td>
+        <td><%= "%0.2f" % voter.weight.round(2) %>%</td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+</div>
+<% end %>
+</div>
+
+<style>
+
+.table thead tr th.vert {height: 100px; padding: 0; width: 1.5em;}
+.table thead tr th.vert span {border-bottom: 1px solid #CCC; white-space: nowrap;}
+.table thead tr th.vert div {transform: translate(6px, -7px) rotate(300deg); width: 20px;}
+
+.vote-chart thead tr th,
+.vote-chart tbody tr td,
+.vote-chart tbody tr th {padding: 0 12px 0 0;}
+
+table.vote-chart tbody tr:hover {background-color: #F6f6f6;}
+
+table.vote-chart tr.active-true  td      {background: #F6FFF6;}
+/*table.vote-chart tr.active-false td      {background: rgba(255,0,0,0.025);}*/
+
+table.vote-chart tr.active-top    td      {background: rgba(0,255,0,0.05)}
+table.vote-chart tr.active-10    td      {background: rgba(0,255,0,0.025)}
+table.vote-chart tr.active-5     td      {background: rgba(0,255,0,0.020)}
+table.vote-chart tr.active-1     td      {background: rgba(0,255,0,0.015)}
+table.vote-chart tr.active-01    td      {background: rgba(0,255,0,0.010)}
+
+table.vote-chart tr td.vote-cell {text-align: center; border-left: 1px solid #CCC; padding: 0;}
+table.vote-chart tr td.vote-yes  {background: rgba(0,255,0,0.1); color: #080;}
+table.vote-chart tr td.vote-no   {background: rgba(0,0,0,0.1); color: #C00;}
+table.vote-chart tr td.vote-nil  {background: rgba(127,127,127,0.1); color: #DDD;}
+
+table.vote-chart {zoom: 0.9}
+
+
+</style>
+
+<% rank = 0 %>
+<% @wits.each_slice(25) do |wits| %>
+  
+  <hr />
+  <br />
+  <h4 style="margin-bottom: -30px; margin-left: 1em;">Witnesses #<%= rank + 1 %> to #<%= rank + 25 %></h4>
+  <table class="table table-condensed vote-chart">
+    <thead>
+      <tr>
+        <th class="text-center">#</th>
+        <th>Witness</th>
+        <th class="text-right">Support</th>
+        <% @chart_voters.each do |voter| %>
+          <th class="vert"><div><span><%= pretty_name(voter.name) %></span></div></th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% wits.each do |w, votes| %>
+        <% rank += 1 %>
+        <% pct = (100.0 * votes / vests) %>
+        <% cls = case
+          when rank < 20 then  'active-top'
+          when pct > 10 then  'active-10'
+          when pct > 5  then  'active-5'
+          when pct > 1  then  'active-1'
+          when pct > 0.1 then 'active-01'
+          else 'active-false' 
+          end
+          %>
+          
+        <tr class="<%= cls %>">
+          <td class="text-center"><%= rank %></td>
+          <td><%= pretty_name(w) %></td>
+          <td class="text-right"><%= "%0.2f" % (100.0 * votes / vests) %>%</td>
+
+
+          <% @chart_voters.each do |voter| %>
+            <% yes = voter.votes_for.split(',').include?(w) %>
+            <% vt = (w == voter.name && !yes) ? 'no' : (yes ? 'yes' : 'nil') %>
+            <td class="vote-cell vote-<%= vt %>"><%= yes ? 'Y' : '' %></td>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

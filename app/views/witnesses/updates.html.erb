@@ -1,0 +1,11 @@
+
+<% @posts.group_by{|post| post.created.strftime('%Y-%W')}.sort_by{|k,v| k}.reverse.each do |date, posts| %>
+  <h2><%= date %></h2>
+  <% posts.each do |post| %>
+    <%= post.inspect %>
+    <% url = "#{post.category}/@#{post.author}/#{post.permlink}" %>
+    <a href="https://steemit.com/<%= url %>"><%= url %></a>
+    <hr />
+
+  <% end %>
+<% end %>

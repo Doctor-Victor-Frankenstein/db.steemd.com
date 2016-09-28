@@ -1,0 +1,206 @@
+<%
+def popcount a
+  b = 0
+  while a > 0
+    b += (a & 1)
+    a = a >> 1
+  end
+  b
+end
+
+def rate r
+  b = r['base'].split(' ')[0].to_f
+  q = r['quote'].split(' ')[0].to_f
+  q > 0 ? b / q : nil
+end
+
+def median(array)
+  sorted = array.sort
+  len = sorted.length
+  (sorted[(len - 1) / 2] + sorted[len / 2]) / 2.0
+end
+
+
+@info = @rpc.get_dynamic_global_properties
+
+vest_s = @info['total_vesting_fund_steem'].split(' ')[0].to_f
+vest_v = @info['total_vesting_shares'].split(' ')[0].to_f / 10**6
+@mvsteem = vest_s / vest_v
+
+vest_v = @info['total_vesting_shares'].split(' ')[0].to_f
+@miners = @rpc.get_miner_queue
+active = @rpc.get_active_witnesses
+wits   = @rpc.get_witnesses_by_vote("", 100).sort_by{|w| w['votes'].to_i}.reverse
+@withdraw = @rpc.get_accounts(wits.map{|w| w['owner']}).map{|o| [o['name'], o['vesting_withdraw_rate']]}.to_h
+
+missing = active - wits.map{|w| w['owner']} - @miners
+head_block = @info['head_block_number'].to_i
+
+feeds = active.map{|w| wits.find{|w2| w2['owner'] == w}}.compact.map{|w| rate(w['sbd_exchange_rate'])}.compact
+feed_avg = median(feeds)
+
+colors = {
+  #'0.10' => 'rgba(190,190,190,0.01)',
+  #'0.11' => 'rgba(190,190,190,0.01)',
+  '0.12' => 'rgba(255,200,200,0.1)', #fade red
+  '0.13' => 'rgba(32,188,15,0.1)',   # green
+  '0.14' => 'rgba(94,163,208,0.1)',  # upgrade blue
+  '0.15' => 'rgba(120,26,51,0.1)',
+
+}
+
+made = Generic.query_all("SELECT witness,count(*) FROM blocks WHERE id > 934585 GROUP BY witness").to_h
+
+%>
+<span style="float: right; margin-top: 0px; font-size: 240%;" class="lead">
+  <span style="xfont-size: 200%; opacity: 0.5"><%= ((100*popcount(@info['recent_slots_filled'].to_i))/128.0).round(5) %>%</span>
+  <span style="opacity: 0.4;">Participation</span>
+</span>
+
+<h2>
+  Witnesses
+</h2>
+<hr />
+<div class="row">
+  <div class="col-md-12">
+    <div class="">
+      <div class="table-responsive">
+      <table class="table table-condensed" style="margin: 0;">
+        <thead>
+          <th>Rank</th>
+          <th>Witness</th>
+          <th style="text-align: right;">Approval</th>
+          <th style="text-align: center;">%</th>
+          <th style="text-align: right;">Made</th>
+          <th style="text-align: right;">Miss</th>
+          <th style="text-align: right;">Reliability</th>
+          <th style="text-align: right;">Last block</th>
+          <th style="text-align: center;">URL</th>
+          <th style="text-align: right;">Reg<br />Fee</th>
+          <th style="text-align: right;">Feed</th>
+          <th style="text-align: right;">APR</th>
+          <th style="text-align: right;">Block<br />Size</th>
+          <th style="text-align: right;">Version</th>
+          <th style="text-align: right;">Withdraw<br />Rate</th>
+          <th style="text-align: right;">Seed</th>
+          <th style="text-align: right;">Status</th>
+        </thead>
+
+        <% wits.each_with_index do |w, rank| %>
+          <% prod = made[w['owner']] || 0 %>
+          <% ttl = w['total_missed'] + prod %>
+          <% miss_pct = ttl == 0 ? 0 : w['total_missed'].to_f / ttl %>
+          <% reliability = (100.0 - miss_pct * 100).round(5) %>
+
+          <% miss_opacity = case
+               when ttl > 500 || (ttl >= 0 && reliability > 98) then 1
+               when ttl > 100 then 0.6
+               else 0.25
+             end %>
+          <% miss_color = case
+               when reliability > 99.9 then 'rgba(0,255,0,0.20)'
+               when reliability > 99.5 then 'rgba(0,255,0,0.15)'
+               when reliability > 99 then 'rgba(0,255,0,0.10)'
+               when reliability > 98 then 'rgba(0,255,0,0.05)'
+
+               when reliability > 97 then 'rgba(255,0,0,0.05)'
+               when reliability > 95 then 'rgba(255,0,0,0.10)'
+               when reliability > 90 then 'rgba(255,0,0,0.15)'
+               #else 'rgba(255,0,0,0.4)'
+               else 'rgba(0,0,0,0.05)'
+             end %>
+
+          <tr>
+            <td align="center"><%= rank + 1 %></td>
+            <td><%= active.include?(w['owner']) ? content_tag(:strong, pretty_name(w['owner'])) : pretty_name(w['owner']) %></td>
+            <td align="right" class="text-muted" style="opacity: 0.85"><%= pretty_num((w["votes"].to_f / 10**6) / 10**6, 0.1) %><m>M</m></td>
+            <td align="center"><%= "%.2f%" % (100*(w["votes"].to_f / 10**6)/vest_v).round(2) %>
+            <td align="right"><%= pretty_num(made[w['owner']] || 0) %></td>
+            <td align="right"><%= w['total_missed'] %></td>
+            <td align="right" style="opacity: <%= miss_opacity %>; background: <%= miss_color %>"><%= "%0.2f" % (100 * (1 - miss_pct)) %></td>
+
+            <% opa = [[0, (head_block - w['last_confirmed_block_num'].to_i - 21)].max / 7200.0, 0.8].min %>
+            <td align="right" style="opacity: <%= 1 - opa %>"><%= pretty_num(w['last_confirmed_block_num']) %></td>
+            <td align="center"><%= pretty_url(w['url'].strip == 'sss' ? "http://steemd.com/@#{w['owner']}" : w['url']) %></td>
+
+            <% regfee = w['props']['account_creation_fee'].split(' ')[0].to_f %>
+            <% regfees = ("%0.3f" % regfee).sub(/(\.000)$/, "<span style=\"opacity: 0.5;\">\\1</span>").html_safe %>
+            <td align="right"><%= regfee >= 10 ? pretty_num(regfee) : regfees %><m></m></td>
+
+            <% 
+              r = rate(w['sbd_exchange_rate'])
+              fp = r ? "$#{'%0.3f' % r.round(3)}" : ""
+              fp = fp.sub(/(\d)$/, "<span style=\"opacity: 0.6;\">\\1</span>").html_safe
+              foff = r ? (r / feed_avg) - 1 : 0.15
+              fcolor = case
+                when foff.abs > 0.50 then 'rgba(255,0,0,0.15)'
+                when foff.abs > 0.25 then 'rgba(255,0,0,0.10)'
+                when foff.abs > 0.10 then 'rgba(255,0,0,0.05)'
+                when foff.abs > 0.05 then 'rgba(0,255,0,0.05)'
+                when foff.abs > 0.01 then 'rgba(0,255,0,0.10)'
+                else 'rgba(0,255,0,0.15)'
+             end
+            %>
+            <td align="right" style="background: <%= fcolor %>"><%= fp %></td>
+
+            <td align="right"><%= w['props']['sbd_interest_rate'].to_i/100 %><m>%</m></td>
+            <td align="right"><%= pretty_num(w['props']['maximum_block_size'].to_i) %></td>
+
+            <% v = w['running_version'] %>
+            <% color = colors[v.scan(/^\d+\.\d+/)[0]] %>
+            <% color = color ? color.sub('0.1', ((v.split('.')[2].to_i+1)/10.0).to_s) : 'rgba(255,0,0,0.1)' %>
+            <td align="right" style="background: <%= color %>;"><%= v.gsub(/((?<=^|\.)0|\.)/, '<span style="opacity:0.35">\\1</span>').html_safe %></td>
+
+            <!--<td><%= (@withdraw[w['owner']].split(' ')[0].to_f/1000000*@mvsteem).round %><m>STM</m></td>-->
+            <% rate = (@withdraw[w['owner']].split(' ')[0].to_f/1000000).round(3) %>
+            <td class="text-right" style="opacity: <%= rate == 0 ? 0.5 : 1 %>"><%= "%0.3f" % rate %><m>MV</m></td>
+
+            <% seed = @seeds[w['owner']] || [nil,nil] %>
+            <td><%= seed[0] %></td>
+            <td><%= seed[1] %></td>
+          </tr>
+        <% end %>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div>
+  <div class="col-md-3">
+    <div class="well well-sm">
+    <p style="font-size: 120%; text-align: center; margin: 8px 0 -8px;"><strong>Miner-witness queue</strong></p><hr />
+    <% missing.each do |m| %>
+      <div style="border: 1px solid #EEE; margin: -0.5em 2em 0.5em; padding: 0.2em 0.5em"><strong><%= pretty_name(m) %></strong></div>
+    <% end %>
+    <ol style="font-size: 14px; line-height: 140%;">
+      <% @miners.each_with_index do |miner, i| %>
+        <li><%= content_tag(active.include?(miner) ? :strong : :span, pretty_name(miner)) %></li>
+      <% end %>
+    </ol>
+    </div>
+  </div>
+</div>
+
+<%= @rpc.get_next_scheduled_hardfork %>
+
+<div class="row">
+  <div class="col-md-12">
+    <hr />
+    <p class="lead">
+      On the STEEM blockchain, witnesses serve a role of validating signatures and timestamping transactions by including them in blocks.
+      A block is any group of transactions (posts, votes, transfers, etc) which update the state of the database.
+      Each time a witness produces a block, they are paid for their service.
+      If a witness fails to produce a block, then they are not paid, and may even be voted out.
+    </p>
+    <p class="lead">
+      Every round of block production begins with the shuffling of 21 witnesses: the top 19 witnesses (by vote), plus one randomly-selected standby witness, and one miner witness.
+      Each is given a turn to produce a single block at a fixed rate of one block every 3 seconds.
+      If a witness does not produce a block in their time slot, then that time slot is skipped, and the next witness produces the next block.
+    </p>
+    <p class="lead">
+      <a href="https://bitshares.org/technology/delegated-proof-of-stake-consensus/">Learn more about DPOS</a><br />
+    </p>
+  </div>
+</div>
+

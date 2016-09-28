@@ -5,10 +5,32 @@
   <%= stylesheet_link_tag    'application', media: 'all', 'data-turbolinks-track' => true %>
   <%= javascript_include_tag 'application', 'data-turbolinks-track' => true %>
   <%= csrf_meta_tags %>
+<style>
+m {
+  color: #666;
+  opacity: 0.5;
+  font-size: 65%;
+}
+.width-auto {width: auto !important;}
+table.ultra-condensed > tbody > tr > th,
+table.ultra-condensed > tbody > tr > td {padding: 2px 4px; font-size: 96%;}
+
+table.ultra-condensed > tfoot > tr > th,
+table.ultra-condensed > tfoot > tr > td {padding: 2px 4px; font-size: 96%;}
+
+table.ultra-condensed > * > tr > th,
+table.ultra-condensed > * > tr > td {border-color: #EEE;}
+</style>
 </head>
 <body>
 
-<%= yield %>
+<header>
+beta.steemd.com
+</header>
+
+<div class="container">
+  <%= yield %>
+</div>
 
 </body>
 </html>
