@@ -93,7 +93,7 @@ namespace :sync do
         bout << [loading, JSON.parse(event.data)['result'].compact]
 
         if bout.size == 1000
-          _create_blocks!(bout)
+          _create_blocks!(bout, @db)
           bar.increment! bout.size
           bout = []
         end
@@ -112,7 +112,7 @@ namespace :sync do
         EM.stop_event_loop
 
         if bout.size > 0
-          _create_blocks!(bout)
+          _create_blocks!(bout, @db)
           bar.increment! bout.size
         end
       end
@@ -120,7 +120,7 @@ namespace :sync do
     puts "fin"
   end
 
-  def _create_blocks!(blocks)
+  def _create_blocks!(blocks, db)
     #comments = []
     #votes = []
     #
@@ -130,6 +130,11 @@ namespace :sync do
         block['transactions'].each do |tx|
           tx['operations'].each do |type, o|
             case type
+              when 'account_create'
+                if !Account.get_id(o['new_account_name'], false)
+                  acct = db.get_accounts([o['new_account_name']])[0]
+                  Generic.insert('accounts', Account.to_hash(acct))
+                end
 
               when 'comment'
                 if !PostId.get_id(o['author'], o['permlink'], false)
@@ -180,7 +185,7 @@ namespace :sync do
     #post_ids = Generic.query_col(sql)
 
     posts = Generic.query_all("SELECT id, parent_id, block_id, author, permlink FROM post_ids WHERE id NOT IN (SELECT id FROM posts)")
-
+    exit if posts.size == 0
 
     EM.run {
       bar     = ProgressBar.new(posts.size, :bar, :counter, :percentage, :elapsed, :eta, :rate)

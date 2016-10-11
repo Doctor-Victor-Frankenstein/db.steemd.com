@@ -15,21 +15,23 @@ ActiveRecord::Schema.define(version: 5) do
 
   create_table "accounts", id: false, force: :cascade do |t|
     t.integer  "id",          limit: 8,     null: false
-    t.string   "name",        limit: 16
+    t.string   "name",        limit: 16,    null: false
     t.string   "proxy",       limit: 16
     t.integer  "proxy_vests", limit: 8
-    t.datetime "created"
-    t.datetime "active"
-    t.integer  "steem",       limit: 8
-    t.integer  "sbd",         limit: 8
-    t.integer  "vests",       limit: 8
-    t.integer  "post_count",  limit: 4
-    t.float    "reputation",  limit: 24
+    t.datetime "created",                   null: false
+    t.datetime "active",                    null: false
+    t.integer  "steem",       limit: 8,     null: false
+    t.integer  "sbd",         limit: 8,     null: false
+    t.integer  "vests",       limit: 8,     null: false
+    t.integer  "post_count",  limit: 4,     null: false
+    t.float    "reputation",  limit: 24,    null: false
     t.text     "votes_for",   limit: 65535
   end
 
   add_index "accounts", ["id"], name: "index_accounts_on_id", unique: true, using: :btree
   add_index "accounts", ["name"], name: "index_accounts_on_name", unique: true, using: :btree
+  add_index "accounts", ["proxy"], name: "index_accounts_on_proxy", using: :btree
+  add_index "accounts", ["proxy_vests"], name: "index_accounts_on_proxy_vests", using: :btree
 
   create_table "blocks", id: false, force: :cascade do |t|
     t.integer  "id",      limit: 8,  null: false

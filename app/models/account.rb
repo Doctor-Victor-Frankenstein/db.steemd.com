@@ -19,7 +19,7 @@ class Account < ActiveRecord::Base
       proxy:       o['proxy'],
       proxy_vests: proxy_vests(o),
       created:     o['created'],
-      active:      o['last_active'],
+      active:      o['created'], #o['last_active'],
       steem:       amt(o['balance']) * 1000,
       sbd:         amt(o['sbd_balance']) * 1000,
       vests:       amt(o['vesting_shares']) * 1000000,
