@@ -4,15 +4,15 @@ class WitnessesController < ApplicationController
 
     @seeds = {}
     if false
-    require "open-uri"
-    seeds = URI.parse('https://status.steemnodes.com/').read
-    rows = seeds.scan(/<tr>\s*<td>.*?<\/tr>/m)
-    rows.each do |row|
-      cells = row.scan(/<td>(.*?)<\/td>/).flatten
-      url, status, witness = cells.map{|v| v.gsub(/<[^>]+>/, '').strip}
-      @seeds[witness] = [url, status] unless witness.blank?
+      require "open-uri"
+      seeds = URI.parse('https://status.steemnodes.com/').read
+      rows = seeds.scan(/<tr>\s*<td>.*?<\/tr>/m)
+      rows.each do |row|
+        cells = row.scan(/<td>(.*?)<\/td>/).flatten
+        url, status, witness = cells.map{|v| v.gsub(/<[^>]+>/, '').strip}
+        @seeds[witness] = [url, status] unless witness.blank?
+      end
     end
-end
   end
 
   def updates

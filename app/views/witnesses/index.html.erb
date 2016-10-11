@@ -31,7 +31,6 @@ vest_v = @info['total_vesting_shares'].split(' ')[0].to_f
 @miners = @rpc.get_miner_queue
 active = @rpc.get_active_witnesses
 wits   = @rpc.get_witnesses_by_vote("", 100).sort_by{|w| w['votes'].to_i}.reverse
-@withdraw = @rpc.get_accounts(wits.map{|w| w['owner']}).map{|o| [o['name'], o['vesting_withdraw_rate']]}.to_h
 
 missing = active - wits.map{|w| w['owner']} - @miners
 head_block = @info['head_block_number'].to_i
@@ -78,12 +77,12 @@ made = Generic.query_all("SELECT witness,count(*) FROM blocks WHERE id > 934585 
           <th style="text-align: center;">URL</th>
           <th style="text-align: right;">Reg<br />Fee</th>
           <th style="text-align: right;">Feed</th>
+          <th style="text-align: left;">(Bias)</th>
           <th style="text-align: right;">APR</th>
           <th style="text-align: right;">Block<br />Size</th>
           <th style="text-align: right;">Version</th>
-          <th style="text-align: right;">Withdraw<br />Rate</th>
-          <th style="text-align: right;">Seed</th>
-          <th style="text-align: right;">Status</th>
+<!--          <th style="text-align: right;">Seed</th>
+          <th style="text-align: right;">Status</th>-->
         </thead>
 
         <% wits.each_with_index do |w, rank| %>
@@ -112,7 +111,8 @@ made = Generic.query_all("SELECT witness,count(*) FROM blocks WHERE id > 934585 
 
           <tr>
             <td align="center"><%= rank + 1 %></td>
-            <td><%= active.include?(w['owner']) ? content_tag(:strong, pretty_name(w['owner'])) : pretty_name(w['owner']) %></td>
+            <% name = active.include?(w['owner']) ? content_tag(:strong, pretty_name(w['owner'])) : pretty_name(w['owner']) %>
+            <td><%= w['signing_key'] == 'STM1111111111111111111111111111111114T1Anm' ? content_tag(:s,name, style: 'opacity:0.5') : name %></td>
             <td align="right" class="text-muted" style="opacity: 0.85"><%= pretty_num((w["votes"].to_f / 10**6) / 10**6, 0.1) %><m>M</m></td>
             <td align="center"><%= "%.2f%" % (100*(w["votes"].to_f / 10**6)/vest_v).round(2) %>
             <td align="right"><%= pretty_num(made[w['owner']] || 0) %></td>
@@ -142,6 +142,8 @@ made = Generic.query_all("SELECT witness,count(*) FROM blocks WHERE id > 934585 
              end
             %>
             <td align="right" style="background: <%= fcolor %>"><%= fp %></td>
+            <% bias = w['sbd_exchange_rate']['quote'].split(' ')[0].to_f %>
+            <td align="left"><%= bias != 1 ? ("(%0.2f%%)" % (-100 * (1 - 1/bias)).round(2)) : '' %></td>
 
             <td align="right"><%= w['props']['sbd_interest_rate'].to_i/100 %><m>%</m></td>
             <td align="right"><%= pretty_num(w['props']['maximum_block_size'].to_i) %></td>
@@ -150,14 +152,10 @@ made = Generic.query_all("SELECT witness,count(*) FROM blocks WHERE id > 934585 
             <% color = colors[v.scan(/^\d+\.\d+/)[0]] %>
             <% color = color ? color.sub('0.1', ((v.split('.')[2].to_i+1)/10.0).to_s) : 'rgba(255,0,0,0.1)' %>
             <td align="right" style="background: <%= color %>;"><%= v.gsub(/((?<=^|\.)0|\.)/, '<span style="opacity:0.35">\\1</span>').html_safe %></td>
-
-            <!--<td><%= (@withdraw[w['owner']].split(' ')[0].to_f/1000000*@mvsteem).round %><m>STM</m></td>-->
-            <% rate = (@withdraw[w['owner']].split(' ')[0].to_f/1000000).round(3) %>
-            <td class="text-right" style="opacity: <%= rate == 0 ? 0.5 : 1 %>"><%= "%0.3f" % rate %><m>MV</m></td>
-
+<!--
             <% seed = @seeds[w['owner']] || [nil,nil] %>
             <td><%= seed[0] %></td>
-            <td><%= seed[1] %></td>
+            <td><%= seed[1] %></td>-->
           </tr>
         <% end %>
       </table>
