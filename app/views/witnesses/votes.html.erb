@@ -28,10 +28,18 @@ rows = Generic.query_all(sql)
   voter.votes = voter.votes_for.split(',')
 end
 
-steemit_exclude = false
+excludes = []
 if @all_voters[0].name == 'steemit' && @all_voters[0].votes.size == 0
   @all_voters.shift
-  steemit_exclude = true
+  excludes << 'steemit'
+end
+
+(0..5).each do |i|
+if @all_voters[i].name == 'steem' && @all_voters[i].votes.size == 0
+  @all_voters.delete_at(i)
+  excludes << 'steem'
+  break
+end
 end
 
 max = @all_voters[0].weight
@@ -64,7 +72,7 @@ active = @all_voters.group_by{|v| true || !v.votes_for.blank?}
         <td class="text-center">
           <div style="position:relative;">
             <% color = voter.votes.size == 0 ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,255,0.15)' %>
-            <div style="left:-4px;top:-2px;position:absolute;background:<%=color%>;width:<%= 100*[1, voter.weight/max].min * 8 %>px;height:1.8em;"></div>
+            <div style="z-index:-1;left:-4px;top:-2px;position:absolute;background:<%=color%>;width:<%= 100*[1, voter.weight/max].min * 8 %>px;height:1.8em;"></div>
             <%= i+1 %>
           </div>
         </td>
@@ -79,8 +87,8 @@ active = @all_voters.group_by{|v| true || !v.votes_for.blank?}
     <% end %>
   </tbody>
 </table>
-<% if steemit_exclude %>
-  <p class="text-muted">@steemit (with 0 votes) exluded from this table.</p>
+<% if excludes.size > 0 %>
+  <p class="text-muted"><%= excludes.map{|n| "@#{n}"}.join(', ') %> (with 0 votes) excluded from this table.</p>
 <% end %>
 
 </div>

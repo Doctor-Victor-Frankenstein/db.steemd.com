@@ -14,7 +14,7 @@ class Account < ActiveRecord::Base
 
   def self.to_hash(o)
     atts = {
-      id:          o['id'].split('.')[-1].to_i,
+      id:          o['id'].to_i, #split('.')[-1].to_i,
       name:        o['name'],
       proxy:       o['proxy'],
       proxy_vests: proxy_vests(o),

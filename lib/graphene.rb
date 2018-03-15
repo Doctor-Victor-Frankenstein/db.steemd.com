@@ -33,7 +33,7 @@ module Graphene
       st = Time.now
       response = nil
       body     = {jsonrpc: "2.0", method: method, params: params, id: id}
-      Net::HTTP.start(@uri.hostname, @uri.port) do |http|
+      Net::HTTP.start(@uri.hostname, @uri.port, :use_ssl => @uri.scheme == 'https') do |http|
         @req.body = body.to_json
         response  = http.request(@req)
       end

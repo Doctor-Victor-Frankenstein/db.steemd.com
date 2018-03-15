@@ -1,6 +1,6 @@
 class Post < ActiveRecord::Base
-  include Elasticsearch::Model
-  include Elasticsearch::Model::Callbacks
+  #include Elasticsearch::Model
+  #include Elasticsearch::Model::Callbacks
 
   self.primary_key = 'id'
 

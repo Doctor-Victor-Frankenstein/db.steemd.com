@@ -25,6 +25,7 @@ namespace :sync do
     # Sync all accounts in batches of 1,000
     bar = ProgressBar.new(accounts.size, :bar, :counter, :percentage, :elapsed, :eta, :rate)
     accounts.each_slice(1000) do |names|
+      sleep(1)
       ActiveRecord::Base.transaction do
         @db.get_accounts(names).each do |o|
           atts = Account.to_hash(o)

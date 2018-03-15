@@ -3,7 +3,7 @@ module ApplicationHelper
     raise "invalid name: #{name}" unless /^[a-z0-9\.\-]+$/.match(name)
     active = @account && name == @account['name']
 
-    link_to_unless(active, name, "/@#{name}", class: 'account'){|out| content_tag(:span, out, class: 'account')}
+    link_to_unless(active, name, "https://steemd.com/@#{name}", class: 'account'){|out| content_tag(:span, out, class: 'account')}
   end
 
   def pretty_num num, round = nil

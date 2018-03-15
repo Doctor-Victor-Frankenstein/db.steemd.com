@@ -143,7 +143,7 @@ made = Generic.query_all("SELECT witness,count(*) FROM blocks WHERE id > 934585 
             %>
             <td align="right" style="background: <%= fcolor %>"><%= fp %></td>
             <% bias = w['sbd_exchange_rate']['quote'].split(' ')[0].to_f %>
-            <td align="left"><%= bias != 1 ? ("(%0.2f%%)" % (-100 * (1 - 1/bias)).round(2)) : '' %></td>
+            <td align="left"><%= bias != 1 ? ("(%0.1f%%)" % (100 * (1 - 1/bias)).round(1)) : '' %></td>
 
             <td align="right"><%= w['props']['sbd_interest_rate'].to_i/100 %><m>%</m></td>
             <td align="right"><%= pretty_num(w['props']['maximum_block_size'].to_i) %></td>
@@ -164,9 +164,10 @@ made = Generic.query_all("SELECT witness,count(*) FROM blocks WHERE id > 934585 
   </div>
 </div>
 
+<hr />
+
 <div>
   <div class="col-md-3">
-    <div class="well well-sm">
     <p style="font-size: 120%; text-align: center; margin: 8px 0 -8px;"><strong>Miner-witness queue</strong></p><hr />
     <% missing.each do |m| %>
       <div style="border: 1px solid #EEE; margin: -0.5em 2em 0.5em; padding: 0.2em 0.5em"><strong><%= pretty_name(m) %></strong></div>
@@ -176,29 +177,5 @@ made = Generic.query_all("SELECT witness,count(*) FROM blocks WHERE id > 934585 
         <li><%= content_tag(active.include?(miner) ? :strong : :span, pretty_name(miner)) %></li>
       <% end %>
     </ol>
-    </div>
   </div>
 </div>
-
-<%= @rpc.get_next_scheduled_hardfork %>
-
-<div class="row">
-  <div class="col-md-12">
-    <hr />
-    <p class="lead">
-      On the STEEM blockchain, witnesses serve a role of validating signatures and timestamping transactions by including them in blocks.
-      A block is any group of transactions (posts, votes, transfers, etc) which update the state of the database.
-      Each time a witness produces a block, they are paid for their service.
-      If a witness fails to produce a block, then they are not paid, and may even be voted out.
-    </p>
-    <p class="lead">
-      Every round of block production begins with the shuffling of 21 witnesses: the top 19 witnesses (by vote), plus one randomly-selected standby witness, and one miner witness.
-      Each is given a turn to produce a single block at a fixed rate of one block every 3 seconds.
-      If a witness does not produce a block in their time slot, then that time slot is skipped, and the next witness produces the next block.
-    </p>
-    <p class="lead">
-      <a href="https://bitshares.org/technology/delegated-proof-of-stake-consensus/">Learn more about DPOS</a><br />
-    </p>
-  </div>
-</div>
-
